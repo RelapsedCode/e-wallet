@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import gen.drazhev.ewallet.model.Wallet;
 import gen.drazhev.ewallet.repository.WalletRepositoryInterface;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequestMapping("/wallet")
 public class WalletController {
@@ -29,8 +31,11 @@ public class WalletController {
 		// @RequestParam means it is a parameter from the GET or POST request
 		Wallet wallet = new Wallet();
 		wallet.setAddress(address);
+		System.out.println();
 		wallet.setBalance(balance);
 		walletRepositoryInterface.save(wallet);
+		log.info("Wallet address: " + wallet.getAddress());
+		log.info("Wallet balance: " + wallet.getBalance() + "\n");
 		return wallet;
 	}
 
@@ -40,6 +45,5 @@ public class WalletController {
 		// This returns a JSON or XML with the users
 		return walletRepositoryInterface.findAll();
 	}
-
 
 }

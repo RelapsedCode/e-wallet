@@ -21,7 +21,8 @@ import lombok.NoArgsConstructor;
 @Entity
 public class Wallet {
 	@Id
-	private Integer id = 1;
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private Integer id;
 
 	@Column(name = "address")
 	private String address;

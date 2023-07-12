@@ -1,10 +1,8 @@
 package gen.drazhev.ewallet.controller;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -16,7 +14,9 @@ import gen.drazhev.ewallet.model.Wallet;
 import gen.drazhev.ewallet.repository.PlatformFundsRepositoryInterface;
 import gen.drazhev.ewallet.repository.TransactionRepositoryInterface;
 import gen.drazhev.ewallet.repository.WalletRepositoryInterface;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequestMapping("/transaction")
 public class TransactionController {
@@ -31,7 +31,7 @@ public class TransactionController {
 
 	Faker faker = new Faker();
 
-	@Autowired
+	//	@Autowired
 	public TransactionController(WalletRepositoryInterface walletRepositoryInterface, TransactionRepositoryInterface transactionRepositoryInterface,
 			PlatformFundsRepositoryInterface platformFundsRepositoryInterface) {
 		this.walletRepositoryInterface = walletRepositoryInterface;
@@ -39,8 +39,21 @@ public class TransactionController {
 		this.platformFundsRepositoryInterface = platformFundsRepositoryInterface;
 	}
 
-	public void createTransaction() {
+	public void createTransaction(String transactionUUID, double amount, String senderAddress, String receiverAddress, String status) {
+		Transaction transaction = new Transaction();
+		transaction.setTransactionUUID(transactionUUID);
+		transaction.setAmount(amount);
+		transaction.setSenderAddress(senderAddress);
+		transaction.setReceiverAddress(receiverAddress);
+		transaction.setStatus(status);
+		processTransaction(transaction);
 
+		log.info("Transaction details: \n"
+				+ "UUID: " + transaction.getTransactionUUID() + "\n"
+				+ "Amount: " + transaction.getAmount() + "\n"
+				+ "Sender Address: " + transaction.getSenderAddress() + "\n"
+				+ "Receiver Address: " + transaction.getReceiverAddress() + "\n"
+				+ "Status: " + transaction.getStatus() + "\n");
 	}
 
 	public void processTransaction(Transaction trans) {
@@ -51,35 +64,41 @@ public class TransactionController {
 		double fee = (trans.getAmount() * 1) / 100;
 		double amountToBeSubtracted = trans.getAmount();
 		double amountToBeAdded = trans.getAmount() - fee;
+		log.info("Fee: " + fee);
+		log.info("Amount to be subtracted: " + amountToBeSubtracted);
+		log.info("Amount to be added: " + amountToBeAdded);
 
 		if (senderWallet.getBalance() < amountToBeSubtracted) {
 			trans.setStatus("REJECTED");
 			throw new RuntimeException("Balance is not sufficient");
 		} else {
 			senderWallet.setBalance(senderWallet.getBalance() - amountToBeSubtracted);
+			log.info("Sender new balance: " + senderWallet.getBalance());
 			receiverWallet.setBalance(receiverWallet.getBalance() + amountToBeAdded);
+			log.info("Receiver new balance: " + receiverWallet.getBalance());
 
-			//			List<Transaction> allTransactions = Stream.concat(transactionList.stream(), senderWallet.getTransactions().stream()).toList();
 			senderWallet.setLastTransaction(transactionList);
 			receiverWallet.setLastTransaction(transactionList);
 			trans.setStatus("APPROVED");
-
 		}
 		transactionRepositoryInterface.save(trans);
+		setPlatformFunds(fee);
 	}
 
 	public void setPlatformFunds(double fee) {
-
-		Optional.ofNullable(senderAddress).orElseGet(() ->
-				createWallet(faker.number().randomDouble(2, 10000, 50000)));
-
-		Optional<PlatformFunds> platformFunds = platformFundsRepositoryInterface.findById(1);
-		platformFunds.isPresent()
-
-
-		platformFundsRepositoryInterface.findById(1);
-		PlatformFunds platformFunds = new PlatformFunds();
+		double currentTotalComp = 0;
+		PlatformFunds platformFunds;
+		Optional<PlatformFunds> platformFundsDB = platformFundsRepositoryInterface.findById(1);
+		if (platformFundsDB.isEmpty()) {
+			platformFunds = new PlatformFunds();
+		} else {
+			platformFunds = platformFundsDB.get();
+		}
+		currentTotalComp = platformFunds.getTotalGrossAmount() + fee;
+		platformFunds.setTotalGrossAmount(currentTotalComp);
 		platformFunds.setLastAddedFee(fee);
+
+		platformFundsRepositoryInterface.save(platformFunds);
 	}
 
 }
