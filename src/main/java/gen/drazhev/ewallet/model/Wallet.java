@@ -17,7 +17,6 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-// Tells Hibernate to amke a table out of this class
 @Entity
 public class Wallet {
 	@Id

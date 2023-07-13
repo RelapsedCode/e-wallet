@@ -9,10 +9,10 @@ import java.util.Properties;
 public class ConfigFileReader {
 
 	private final Properties properties;
-	private final String propertyFilePath = "src/main/resources/application.properties";
 
 	public ConfigFileReader() {
 		BufferedReader reader;
+		String propertyFilePath = "src/main/resources/application.properties";
 		try {
 			reader = new BufferedReader(new FileReader(propertyFilePath));
 			properties = new Properties();

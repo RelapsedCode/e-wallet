@@ -2,9 +2,13 @@ package gen.drazhev.ewallet.controller;
 
 import java.util.Optional;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import gen.drazhev.ewallet.model.PlatformFunds;
@@ -18,32 +22,33 @@ public class PlatformController {
 
 	private final PlatformFundsRepositoryInterface platformFundsRepositoryInterface;
 
-	//	@Autowired - dont kill unit tests
 	public PlatformController(PlatformFundsRepositoryInterface platformFundsRepositoryInterface) {
 		this.platformFundsRepositoryInterface = platformFundsRepositoryInterface;
 	}
 
-/*	@ResponseStatus(HttpStatus.CREATED)
-	@PostMapping(path = "/add")
-	public Wallet create(@RequestParam String address, @RequestParam double balance) {
-		// @ResponseBody means the returned String is the response, not a view name
-		// @RequestParam means it is a parameter from the GET or POST request
-		Wallet wallet = new Wallet();
-		wallet.setAddress(address);
-		System.out.println();
-		wallet.setBalance(balance);
+	@ResponseStatus(HttpStatus.OK)
+	@PostMapping(path = "/setfunds")
+	public PlatformFunds SetPlatformFunds(@RequestParam double fee) {
+		double currentTotalComp = 0;
+		PlatformFunds platformFunds;
+		Optional<PlatformFunds> platformFundsDB = platformFundsRepositoryInterface.findById(1);
+		if (platformFundsDB.isEmpty()) {
+			platformFunds = new PlatformFunds();
+		} else {
+			platformFunds = platformFundsDB.get();
+		}
+		currentTotalComp = platformFunds.getTotalGrossAmount() + fee;
+		platformFunds.setTotalGrossAmount(currentTotalComp);
+		platformFunds.setLastAddedFee(fee);
 
-		log.info("Wallet address: " + wallet.getAddress());
-		log.info("Wallet balance: " + wallet.getBalance() + "\n");
-		return wallet;
-	}*/
+		platformFundsRepositoryInterface.save(platformFunds);
+		return platformFunds;
+	}
 
-	@PostMapping(path = "/getFunds")
-	public PlatformFunds getFunds(@RequestParam String address, @RequestParam double balance) {
-		// @ResponseBody means the returned String is the response, not a view name
-		// @RequestParam means it is a parameter from the GET or POST request
+	@GetMapping(path = "/getfunds")
+	public @ResponseBody
+	PlatformFunds GetFunds() {
 		Optional<PlatformFunds> platformFunds = platformFundsRepositoryInterface.findById(1);
-
 		log.info("Platform funds last fee: " + platformFunds.get().getLastAddedFee());
 		log.info("Platform funds total gross amount: " + platformFunds.get().getTotalGrossAmount());
 		return platformFunds.get();

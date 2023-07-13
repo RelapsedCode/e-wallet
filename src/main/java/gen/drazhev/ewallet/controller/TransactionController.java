@@ -1,15 +1,17 @@
 package gen.drazhev.ewallet.controller;
 
 import java.util.List;
-import java.util.Optional;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.github.javafaker.Faker;
-
 import gen.drazhev.ewallet.helpers.ConfigFileReader;
-import gen.drazhev.ewallet.model.PlatformFunds;
 import gen.drazhev.ewallet.model.Transaction;
 import gen.drazhev.ewallet.model.Wallet;
 import gen.drazhev.ewallet.repository.PlatformFundsRepositoryInterface;
@@ -21,18 +23,11 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 @RequestMapping("/transaction")
 public class TransactionController {
-	// create a transaction
-	// check the balance of the sender wallet
-	// subtract the money, add the money to the new acc
-	// set transaction status
 
 	private WalletRepositoryInterface walletRepositoryInterface;
 	private TransactionRepositoryInterface transactionRepositoryInterface;
 	private PlatformFundsRepositoryInterface platformFundsRepositoryInterface;
 
-	Faker faker = new Faker();
-
-	//	@Autowired
 	public TransactionController(WalletRepositoryInterface walletRepositoryInterface, TransactionRepositoryInterface transactionRepositoryInterface,
 			PlatformFundsRepositoryInterface platformFundsRepositoryInterface) {
 		this.walletRepositoryInterface = walletRepositoryInterface;
@@ -40,13 +35,16 @@ public class TransactionController {
 		this.platformFundsRepositoryInterface = platformFundsRepositoryInterface;
 	}
 
-	public void createTransaction(String transactionUUID, double amount, String senderAddress, String receiverAddress, String status) {
+	@ResponseStatus(HttpStatus.CREATED)
+	@PostMapping(path = "/create")
+	public Transaction createTransaction(@RequestParam String transactionUUID, @RequestParam double amount, @RequestParam String senderAddress,
+			@RequestParam String receiverAddress) {
 		Transaction transaction = new Transaction();
 		transaction.setTransactionUUID(transactionUUID);
 		transaction.setAmount(amount);
 		transaction.setSenderAddress(senderAddress);
 		transaction.setReceiverAddress(receiverAddress);
-		transaction.setStatus(status);
+		transaction.setStatus("PENDING");
 		processTransaction(transaction);
 
 		log.info("Transaction details: \n"
@@ -55,14 +53,16 @@ public class TransactionController {
 				+ "Sender Address: " + transaction.getSenderAddress() + "\n"
 				+ "Receiver Address: " + transaction.getReceiverAddress() + "\n"
 				+ "Status: " + transaction.getStatus() + "\n");
+		return transaction;
 	}
 
-	public void processTransaction(Transaction trans) {
+	public Transaction processTransaction(Transaction trans) {
 		List<Transaction> transactionList = List.of(trans);
 		Wallet senderWallet = walletRepositoryInterface.findByAddressIgnoreCase(trans.getSenderAddress());
 		Wallet receiverWallet = walletRepositoryInterface.findByAddressIgnoreCase(trans.getReceiverAddress());
 
-		double fee = (trans.getAmount() * Double.parseDouble(new ConfigFileReader().getPropertyValue("exchange-platform-fee"))) / 100;
+		double fee = (Math.round(
+				(trans.getAmount() * Double.parseDouble(new ConfigFileReader().getPropertyValue("exchange-platform-fee")) / 100) * 100.0) / 100.0);
 		double amountToBeSubtracted = trans.getAmount();
 		double amountToBeAdded = trans.getAmount() - fee;
 		log.info("Fee: " + fee);
@@ -73,9 +73,9 @@ public class TransactionController {
 			trans.setStatus("REJECTED");
 			throw new RuntimeException("Balance is not sufficient");
 		} else {
-			senderWallet.setBalance(senderWallet.getBalance() - amountToBeSubtracted);
+			senderWallet.setBalance(Math.round((senderWallet.getBalance() - amountToBeSubtracted) * 100.0) / 100.0);
 			log.info("Sender new balance: " + senderWallet.getBalance());
-			receiverWallet.setBalance(receiverWallet.getBalance() + amountToBeAdded);
+			receiverWallet.setBalance(Math.round((receiverWallet.getBalance() + amountToBeAdded) * 100.0) / 100.0);
 			log.info("Receiver new balance: " + receiverWallet.getBalance());
 
 			senderWallet.setLastTransaction(transactionList);
@@ -83,23 +83,22 @@ public class TransactionController {
 			trans.setStatus("APPROVED");
 		}
 		transactionRepositoryInterface.save(trans);
-		setPlatformFunds(fee);
+		new PlatformController(platformFundsRepositoryInterface)
+				.SetPlatformFunds(fee);
+		return trans;
 	}
 
-	public void setPlatformFunds(double fee) {
-		double currentTotalComp = 0;
-		PlatformFunds platformFunds;
-		Optional<PlatformFunds> platformFundsDB = platformFundsRepositoryInterface.findById(1);
-		if (platformFundsDB.isEmpty()) {
-			platformFunds = new PlatformFunds();
-		} else {
-			platformFunds = platformFundsDB.get();
-		}
-		currentTotalComp = platformFunds.getTotalGrossAmount() + fee;
-		platformFunds.setTotalGrossAmount(currentTotalComp);
-		platformFunds.setLastAddedFee(fee);
-
-		platformFundsRepositoryInterface.save(platformFunds);
+	@ResponseStatus(HttpStatus.OK)
+	@GetMapping(path = "/all")
+	public @ResponseBody
+	Iterable<Transaction> GetAllTransactions() {
+		return transactionRepositoryInterface.findAll();
 	}
 
+	@ResponseStatus(HttpStatus.OK)
+	@GetMapping(path = "/findtransaction")
+	public @ResponseBody
+	Transaction FindTransaction(@RequestParam String transactionUUID) {
+		return transactionRepositoryInterface.findByTransactionUUID(transactionUUID);
+	}
 }

@@ -1,6 +1,7 @@
 package gen.drazhev.ewallet.controller;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -19,16 +20,13 @@ public class WalletController {
 
 	private final WalletRepositoryInterface walletRepositoryInterface;
 
-	//	@Autowired - dont kill unit tests
 	public WalletController(WalletRepositoryInterface walletRepositoryInterface) {
 		this.walletRepositoryInterface = walletRepositoryInterface;
 	}
 
 	@ResponseStatus(HttpStatus.CREATED)
 	@PostMapping(path = "/create")
-	public Wallet create(@RequestParam String address, @RequestParam double balance) {
-		// @ResponseBody means the returned String is the response, not a view name
-		// @RequestParam means it is a parameter from the GET or POST request
+	public Wallet Create(@RequestParam String address, @RequestParam double balance) {
 		Wallet wallet = new Wallet();
 		wallet.setAddress(address);
 		System.out.println();
@@ -40,9 +38,23 @@ public class WalletController {
 	}
 
 	@ResponseStatus(HttpStatus.OK)
-	@PostMapping(path = "/all")
-	public @ResponseBody Iterable<Wallet> getAllWallets() {
-		// This returns a JSON or XML with the users
+	@GetMapping(path = "/address")
+	public @ResponseBody
+	Wallet GetAllWallets(@RequestParam String walletAddress) {
+		return walletRepositoryInterface.findByAddressIgnoreCase(walletAddress);
+	}
+
+	@ResponseStatus(HttpStatus.OK)
+	@GetMapping(path = "/balance")
+	public @ResponseBody
+	String GetWalletBalance(@RequestParam String walletAddress) {
+		return String.valueOf(walletRepositoryInterface.findByAddressIgnoreCase(walletAddress).getBalance());
+	}
+
+	@ResponseStatus(HttpStatus.OK)
+	@GetMapping(path = "/all")
+	public @ResponseBody
+	Iterable<Wallet> GetAllWallets() {
 		return walletRepositoryInterface.findAll();
 	}
 

@@ -13,7 +13,6 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-// Tells Hibernate to amke a table out of this class
 @Entity
 @Table(name = "transaction")
 public class Transaction {

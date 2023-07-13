@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.github.javafaker.Faker;
 
-import gen.drazhev.ewallet.model.Transaction;
 import gen.drazhev.ewallet.model.Wallet;
 import gen.drazhev.ewallet.repository.PlatformFundsRepositoryInterface;
 import gen.drazhev.ewallet.repository.TransactionRepositoryInterface;
@@ -26,7 +25,6 @@ public class NetworkController {
 	private TransactionRepositoryInterface transactionRepositoryInterface;
 	private PlatformFundsRepositoryInterface platformFundsRepositoryInterface;
 
-	private Transaction transaction;
 	private TransactionController transactionController;
 	private WalletController walletController;
 
@@ -49,12 +47,12 @@ public class NetworkController {
 				createRandomWallet(faker.number().randomDouble(2, 10000, 50000)));
 		Double amountToSend = Optional.ofNullable(amount).orElseGet(() ->
 				faker.number().randomDouble(2, 10, 20000));
-		transactionController.createTransaction(faker.internet().uuid(), amountToSend, walletSender, walletReceiver, "PENDING");
+		transactionController.createTransaction(faker.internet().uuid(), amountToSend, walletSender, walletReceiver);
 	}
 
 	public String createRandomWallet(double balance) {
 		walletController = new WalletController(walletRepositoryInterface);
-		Wallet wallet = walletController.create(faker.internet().uuid(), balance);
+		Wallet wallet = walletController.Create(faker.internet().uuid(), balance);
 		return walletRepositoryInterface.findByAddressIgnoreCase(wallet.getAddress()).getAddress();
 	}
 
