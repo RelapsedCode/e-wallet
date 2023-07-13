@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.github.javafaker.Faker;
 
+import gen.drazhev.ewallet.helpers.ConfigFileReader;
 import gen.drazhev.ewallet.model.PlatformFunds;
 import gen.drazhev.ewallet.model.Transaction;
 import gen.drazhev.ewallet.model.Wallet;
@@ -61,7 +62,7 @@ public class TransactionController {
 		Wallet senderWallet = walletRepositoryInterface.findByAddressIgnoreCase(trans.getSenderAddress());
 		Wallet receiverWallet = walletRepositoryInterface.findByAddressIgnoreCase(trans.getReceiverAddress());
 
-		double fee = (trans.getAmount() * 1) / 100;
+		double fee = (trans.getAmount() * Double.parseDouble(new ConfigFileReader().getPropertyValue("exchange-platform-fee"))) / 100;
 		double amountToBeSubtracted = trans.getAmount();
 		double amountToBeAdded = trans.getAmount() - fee;
 		log.info("Fee: " + fee);
